@@ -7,14 +7,15 @@ import matplotlib.pyplot as plt
 pygame.init()
 
 # Dimensions de la fenêtre
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 1280,720
 WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Jeu de Piano - Frère Jacques")
+pygame.display.set_caption("Piano pour débutants - Frère Jacques")
 
 # Couleurs
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
+GREENER = (35, 150, 35)
 RED = (255, 0, 0)
 
 class Player:
@@ -32,23 +33,32 @@ class PianoKey:
         self.is_black = is_black
         self.default_color = WHITE if not is_black else BLACK
         self.color = self.default_color
-        self.active = False  # Indique si la touche doit être surlignée
+        self.highlight_end_time = None  
+        self.highlight_color = None  
 
     def draw(self, surface):
+        # Vérifier si le temps de surlignage est écoulé
+        if self.highlight_end_time is not None:
+            if pygame.time.get_ticks() >= self.highlight_end_time:
+                self.reset_color()
         pygame.draw.rect(surface, self.color, self.rect)
         pygame.draw.rect(surface, BLACK, self.rect, 1)  # Bordure
 
-    def highlight(self, color):
+    def highlight(self, color, duration):
+        self.highlight_color = color
+        self.highlight_end_time = pygame.time.get_ticks() + duration
         self.color = color
 
     def reset_color(self):
         self.color = self.default_color
+        self.highlight_end_time = None
+        self.highlight_color = None
 
 def create_piano_keys():
     keys = []
     key_width = WIDTH // 7
     key_height = HEIGHT // 2
-    notes = ['do', 'ré', 'mi', 'fa', 'sol', 'la', 'si']
+    notes = ['do', 're', 'mi', 'fa', 'sol', 'la', 'si']
     key_binds = [pygame.K_a, pygame.K_z, pygame.K_e, pygame.K_r, pygame.K_t, pygame.K_y, pygame.K_u]
     
     for i in range(7):
@@ -61,7 +71,7 @@ def create_piano_keys():
     black_keys = []
     black_key_width = key_width // 2
     black_key_height = key_height // 2
-    black_key_positions = [0.75, 1.75, 3.75, 4.75, 5.75]  # Positions relatives
+    black_key_positions = [0.75, 1.75, 3.75, 4.75, 5.75]  
     
     for pos in black_key_positions:
         x = int(pos * key_width)
@@ -73,7 +83,7 @@ def create_piano_keys():
 
 def load_sounds():
     sounds = {}
-    notes = ['do', 'ré', 'mi', 'fa', 'sol', 'la', 'si']
+    notes = ['do', 're', 'mi', 'fa', 'sol', 'la', 'si']
     for note in notes:
         sounds[note] = pygame.mixer.Sound(f"{note}.wav")
     return sounds
@@ -90,7 +100,7 @@ class Leaderboard:
                 reader = csv.DictReader(file, fieldnames=['name', 'score', 'streak', 'reaction_time'])
                 for row in reader:
                     data.append(row)
-            # Supprimer la ligne d'en-tête si elle est présente
+            # Supprimer la ligne d en-tête 
             if data and data[0]['name'] == 'name':
                 data = data[1:]
         except FileNotFoundError:
@@ -109,7 +119,7 @@ class GraphManager:
     def create_graphs(self):
         player_games = [row for row in self.leaderboard.data if row['name'] == self.player_name]
         if not player_games:
-            print("Aucune donnée pour ce joueur.")
+            print("Aucune donné pour ce joueur.")
             return
 
         # Temps de réaction moyen par partie
@@ -149,7 +159,7 @@ class GraphManager:
         plt.ylabel("Score moyen")
         plt.savefig("average_scores.png")
 
-        # Affichage des images (simplifié pour l'exemple)
+        # Affichage des images 
         print("Graphiques générés: reaction_times.png, scores.png, average_scores.png")
 
 class Game:
@@ -162,8 +172,8 @@ class Game:
         self.current_note_index = 0
         # Notes de "Frère Jacques"
         self.song_notes = [
-            'do', 'ré', 'mi', 'do',
-            'do', 'ré', 'mi', 'do',
+            'do', 're', 'mi', 'do',
+            'do', 're', 'mi', 'do',
             'mi', 'fa', 'sol',
             'mi', 'fa', 'sol',
             'sol', 'la', 'sol', 'fa', 'mi', 'do',
@@ -171,7 +181,7 @@ class Game:
             'do', 'sol', 'do',
             'do', 'sol', 'do'
         ]
-        self.note_timing = 1000  # Temps en ms entre les notes
+        self.note_timing = 800  # Temps en ms entre les notes
         self.last_note_time = pygame.time.get_ticks()
         self.score = 0
         self.streak = 0
@@ -272,12 +282,12 @@ class Game:
                         return
 
     def main_loop(self):
-        self.running = True  # Reset running flag
-        self.current_note_index = 0  # Reset song index
-        self.last_note_time = pygame.time.get_ticks()  # Reset timing
-        self.score = 0  # Reset score
-        self.streak = 0  # Reset streak
-        self.reaction_times = []  # Reset reaction times
+        self.running = True  
+        self.current_note_index = 0  # Réinitialiser l'index de la chanson
+        self.last_note_time = pygame.time.get_ticks()  # Réinitialiser le temps
+        self.score = 0  # Réinitialiser le score
+        self.streak = 0  # Réinitialiser le streak
+        self.reaction_times = []  # Réinitialiser les temps de reaction
         self.note_active = False
         self.active_key = None
 
@@ -316,12 +326,9 @@ class Game:
                 self.end_game()
 
         # Vérifier si le joueur a manqué la note
-        if self.note_active and (current_time - self.last_note_time >= 1000):
+        if self.note_active and (current_time - self.last_note_time >= 800):
             # Note manquée
-            self.active_key.highlight(RED)
-            pygame.display.flip()
-            pygame.time.delay(500)
-            self.active_key.reset_color()
+            self.active_key.highlight(RED, 300)  
             self.note_active = False
             self.active_key = None
             self.streak = 0
@@ -337,7 +344,7 @@ class Game:
     def activate_note(self, note):
         for key in self.keys:
             if key.note == note:
-                key.highlight(GREEN)  # Vert
+                key.highlight(GREEN, 800)  # La touche est surlignée en vert pour indiquer qu'il faut appuyer
                 self.note_active = True
                 self.active_key = key
                 self.note_activation_time = time.time()
@@ -354,7 +361,8 @@ class Game:
                     self.reaction_times.append(reaction_time)
                     self.score += 10
                     self.streak += 1
-                    self.active_key.reset_color()
+                    # La touche devient vert doncé pendant 0.5s à partir du moment où le joueur appuie
+                    self.active_key.highlight(GREENER, 300)
                     self.note_active = False
                     self.active_key = None
                     self.last_note_time = pygame.time.get_ticks()
@@ -411,7 +419,7 @@ class Game:
         graph_manager = GraphManager(self.player.name)
         graph_manager.create_graphs()
 
-        # Affichage des graphiques sur la moitié basse de l'écran
+        # Affichage des graphiques
         self.display_graphs()
 
     def display_graphs(self):
@@ -432,7 +440,7 @@ class Game:
         WINDOW.blit(average_scores_image, (2 * WIDTH // 3, HEIGHT // 2))
 
         pygame.display.flip()
-        # Attendre que le joueur appuie sur une touche pour revenir au menu
+        # Attend que le joueur appuie sur unetouche pour revenir au meni
         waiting = True
         while waiting:
             for event in pygame.event.get():
